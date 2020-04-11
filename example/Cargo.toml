@@ -1,0 +1,7 @@
+[package]
+name = "moremacros"
+version = "0.1.0"
+authors = ["Unknown "]
+
+[dependencies]
+moremacros_derive = { path = ".." }
