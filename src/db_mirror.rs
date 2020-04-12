@@ -1,4 +1,39 @@
-use syn::Field;
+use syn::{Field, Ident};
+
+fn write(name: &Ident, v: &Vec<Field>, v_is_full_pk: bool) -> quote::Tokens {
+    let names = v.iter().map(|f| f.ident.clone().unwrap()).collect::<Vec<_>>();
+    let types = v.iter().map(|f| f.ty.clone()).collect::<Vec<_>>();
+    let parameterized = parameterized(&names);
+    let fn_name = create_fn_name(&v, v_is_full_pk);
+
+    quote! {
+        impl #name {
+            pub fn #fn_name(#(#names: #types),*) -> &'static str {
+                concat!("select * from ", stringify!(#name), " where ", #parameterized)
+            }
+         }
+    }
+}
+
+fn create_fn_name(v: &Vec<Field>, is_unique: bool) -> Ident {
+    if is_unique {
+        return Ident::new("select_unique")
+    }
+
+    Ident::new("select_by_".to_string() + &v
+        .iter()
+        .map(|p| p.ident.clone().unwrap().to_string())
+        .collect::<Vec<_>>()
+        .join("_"))
+}
+
+fn parameterized(v: &Vec<Ident>) -> String {
+    v
+        .iter()
+        .map(|f| f.clone().to_string() + " = ?")
+        .collect::<Vec<_>>()
+        .join(" and ")
+}
 
 pub fn generate_select_queries(ast: &syn::DeriveInput) -> quote::Tokens {
     let name = &ast.ident;
@@ -15,37 +50,26 @@ pub fn generate_select_queries(ast: &syn::DeriveInput) -> quote::Tokens {
         }
     };
 
-
-    let fields = struct_fields(ast);
+    let fields = struct_fields(ast).clone();
     let partition_key_fields = filter_attributes(&fields, "partition_key");
     let cluster_key_fields = filter_attributes(&fields, "clustering_key");
-    // How to implement this macro?
-    // The test inside example/src/main.rs/test_db_mirror/test_select_queries should be compiled
-    // It should expand to this:
 
-    // impl SomeStruct {
-    //     pub fn select_by_id_another_id(id: i32, another_id: i32) -> &'static str {
-    //         "select * from SomeStruct where id = ? and another_id = ?"
-    //     }
-    //
-    //     pub fn select_by_id_another_id_cluster_key(id: i32, another_id: i32, cluster_key: i32) -> &'static str {
-    //         // Can also call the other macro
-    //         "select * from SomeStruct where id = ? and another_id = ? and cluster_key = ?"
-    //     }
-    //
-    //     pub fn select_unique(id: i32, another_id: i32, cluster_key: i32, another_cluster_key: i32) -> &'static str {
-    //         // Can also call the other macro
-    //         "select * from SomeStruct where id = ? and another_id = ? and cluster_key = ? and another_cluster_key = ?"
-    //     }
-    // }
-    let select_all_primary_key = quote! {
-        impl #name {
+    if partition_key_fields.is_empty() {
+        assert!(cluster_key_fields.is_empty());
 
-         }
-    };
+        return select_all
+    }
 
+    select_all.append(write(name, &partition_key_fields, cluster_key_fields.is_empty()));
 
-    select_all.append(select_all_primary_key);
+    let mut processed_clustering_key_fields = partition_key_fields.clone();
+    let key_size = partition_key_fields.len() + cluster_key_fields.len();
+
+    for clustering_key in cluster_key_fields.iter() {
+        processed_clustering_key_fields.push(clustering_key.clone());
+
+        select_all.append(write(name, &processed_clustering_key_fields, processed_clustering_key_fields.len() == key_size))
+    }
 
     select_all
 }
@@ -58,7 +82,7 @@ pub fn struct_fields(ast: &syn::DeriveInput) -> &Vec<Field> {
     }
 }
 
-pub fn filter_attributes<'a>(fields: &'a Vec<Field>, att_to_find: &'static str) -> Vec<&'a Field> {
+pub fn filter_attributes(fields: &Vec<Field>, att_to_find: &str) -> Vec<Field> {
     fields
         .iter()
         .filter(|f|
@@ -71,5 +95,6 @@ pub fn filter_attributes<'a>(fields: &'a Vec<Field>, att_to_find: &'static str) 
                         false
                     }
                 }))
+        .map(|f| f.clone())
         .collect()
 }
