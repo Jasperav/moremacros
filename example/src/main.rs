@@ -25,9 +25,9 @@ mod test_db_mirror {
 
         // The line below should NOT be compiled, since only queries that have a where clause can be queried at least by there full partition key (and optional clustering keys)
         //assert_eq!("select * from SomeStruct where id = ?", SomeStruct::select_by_id());
-        assert_eq!("select * from SomeStruct where id = ? and another_id = ?", SomeStruct::select_by_id_another_id());
-        assert_eq!("select * from SomeStruct where id = ? and another_id = ? and cluster_key = ?", SomeStruct::select_by_id_another_id_cluster_key());
-        assert_eq!("select * from SomeStruct where id = ? and another_id = ? and cluster_key = ? and another_cluster_key = ?", SomeStruct::select_unique());
+        assert_eq!("select * from SomeStruct where id = ? and another_id = ?", SomeStruct::select_by_id_another_id(1, 1));
+        assert_eq!("select * from SomeStruct where id = ? and another_id = ? and cluster_key = ?", SomeStruct::select_by_id_another_id_cluster_key(1, 2, 3));
+        assert_eq!("select * from SomeStruct where id = ? and another_id = ? and cluster_key = ? and another_cluster_key = ?", SomeStruct::select_unique(1, 2, 3, 4));
 
     }
 }

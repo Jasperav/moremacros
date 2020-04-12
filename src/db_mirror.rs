@@ -21,6 +21,23 @@ pub fn generate_select_queries(ast: &syn::DeriveInput) -> quote::Tokens {
     let cluster_key_fields = filter_attributes(&fields, "clustering_key");
     // How to implement this macro?
     // The test inside example/src/main.rs/test_db_mirror/test_select_queries should be compiled
+    // It should expand to this:
+
+    // impl SomeStruct {
+    //     pub fn select_by_id_another_id(id: i32, another_id: i32) -> &'static str {
+    //         "select * from SomeStruct where id = ? and another_id = ?"
+    //     }
+    //
+    //     pub fn select_by_id_another_id_cluster_key(id: i32, another_id: i32, cluster_key: i32) -> &'static str {
+    //         // Can also call the other macro
+    //         "select * from SomeStruct where id = ? and another_id = ? and cluster_key = ?"
+    //     }
+    //
+    //     pub fn select_unique(id: i32, another_id: i32, cluster_key: i32, another_cluster_key: i32) -> &'static str {
+    //         // Can also call the other macro
+    //         "select * from SomeStruct where id = ? and another_id = ? and cluster_key = ? and another_cluster_key = ?"
+    //     }
+    // }
     let select_all_primary_key = quote! {
         impl #name {
 
