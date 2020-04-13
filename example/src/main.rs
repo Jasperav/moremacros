@@ -2,32 +2,14 @@
 extern crate moremacros_derive;
 
 #[cfg(test)]
-mod test_db_mirror {
+mod test {
     #[derive(DBMirror)]
-    #[allow(dead_code)]
     struct SomeStruct {
-        #[partition_key]
-        id: i32,
-        #[partition_key]
-        another_id: i32,
-        #[clustering_key]
-        cluster_key: i32,
-        #[clustering_key]
-        another_cluster_key: i32,
-        // Just some column that is not part of the primary key
-        name: String,
+        id: i32
     }
 
     #[test]
-    fn test_select_queries() {
-        assert_eq!("select * from SomeStruct", SomeStruct::select_all());
-        assert_eq!("select count(*) from SomeStruct", SomeStruct::select_all_count());
-
-        // The line below should NOT be compiled, since only queries that have a where clause can be queried at least by there full partition key (and optional clustering keys)
-        //assert_eq!("select * from SomeStruct where id = ?", SomeStruct::select_by_id());
-        assert_eq!("select * from SomeStruct where id = ? and another_id = ?", SomeStruct::select_by_id_another_id(1, 1));
-        assert_eq!("select * from SomeStruct where id = ? and another_id = ? and cluster_key = ?", SomeStruct::select_by_id_another_id_cluster_key(1, 2, 3));
-        assert_eq!("select * from SomeStruct where id = ? and another_id = ? and cluster_key = ? and another_cluster_key = ?", SomeStruct::select_unique(1, 2, 3, 4));
-
+    fn test_some_struct() {
+        SomeStruct::call_id(vec![1, 2]);
     }
 }
